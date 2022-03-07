@@ -80,7 +80,7 @@ echo "Creating batch file to destroy DNS records"
 
 cat > "${SHARED_DIR}"/dns-delete.json <<EOF
 {
-"Comment": "Delete public OpenShift DNS records for VSphere IPI CI install",
+"Comment": "Delete public OpenShift DNS records for Nutanix IPI CI install",
 "Changes": [{
     "Action": "DELETE",
     "ResourceRecordSet": {

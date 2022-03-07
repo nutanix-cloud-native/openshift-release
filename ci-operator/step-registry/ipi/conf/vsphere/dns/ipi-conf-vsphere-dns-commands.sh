@@ -79,7 +79,7 @@ fi
 echo "Creating DNS records..."
 cat > "${SHARED_DIR}"/dns-create.json <<EOF
 {
-"Comment": "Create public OpenShift DNS records for Nutanix IPI CI install",
+"Comment": "Create public OpenShift DNS records for VSphere IPI CI install",
 "Changes": [{
     "Action": "UPSERT",
     "ResourceRecordSet": {
