@@ -157,3 +157,15 @@ aliases:
   - jsafrane
   - RomanBednar
   - tsmetana
+  nutanix-approvers:
+  - staebler
+  - elmiko
+  - fedosin
+  - joelspeed
+  - rvanderp3
+  nutanix-reviewers:
+  - staebler
+  - elmiko
+  - fedosin
+  - joelspeed
+  - rvanderp3
