@@ -4,14 +4,14 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
-echo "vmc-ci.devcluster.openshift.com" > "${SHARED_DIR}"/basedomain.txt
+echo "${BASE_DOMAIN}" > "${SHARED_DIR}"/basedomain.txt
 
 cluster_name=${NAMESPACE}-${JOB_NAME_HASH}
 base_domain=$(<"${SHARED_DIR}"/basedomain.txt)
 cluster_domain="${cluster_name}.${base_domain}"
 
 export AWS_DEFAULT_REGION=us-west-2  # TODO: Derive this?
-export AWS_SHARED_CREDENTIALS_FILE=/var/run/vault/vsphere/.awscred
+export AWS_SHARED_CREDENTIALS_FILE=/var/run/vault/nutanix/.awscred
 export AWS_MAX_ATTEMPTS=50
 export AWS_RETRY_MODE=adaptive
 export HOME=/tmp
@@ -35,11 +35,7 @@ then
     fi
 fi
 
-# Load array created in setup-vips:
-# 0: API
-# 1: Ingress
-declare -a vips
-mapfile -t vips < "${SHARED_DIR}"/vips.txt
+source "${SHARED_DIR}/nutanix_context.sh"
 
 hosted_zone_id="$(aws route53 list-hosted-zones-by-name \
             --dns-name "${base_domain}" \
@@ -47,60 +43,33 @@ hosted_zone_id="$(aws route53 list-hosted-zones-by-name \
             --output text)"
 echo "${hosted_zone_id}" > "${SHARED_DIR}/hosted-zone.txt"
 
-if [ "${JOB_NAME_SAFE}" = "launch" ]; then
-  # Configure DNS target as previously configured NLB
-  nlb_arn=$(<"${SHARED_DIR}"/nlb_arn.txt)
-  nlb_dnsname="$(aws elbv2 describe-load-balancers \
-            --load-balancer-arns ${nlb_arn} \
-            --query 'LoadBalancers[0].DNSName' \
-            --output text)"
-  nlb_hosted_zone_id="$(aws elbv2 describe-load-balancers \
-            --load-balancer-arns ${nlb_arn} \
-            --query 'LoadBalancers[0].CanonicalHostedZoneId' \
-            --output text)"
-
-  # Both API and *.apps pipe through same NLB
-  api_dns_target='"AliasTarget": {
-        "HostedZoneId": "'${nlb_hosted_zone_id}'",
-        "DNSName": "'${nlb_dnsname}'",
-        "EvaluateTargetHealth": false
-        }'
-  apps_dns_target=$api_dns_target
-else
-  # Configure DNS direct to respective VIP
-  api_dns_target='"TTL": 60,
-        "ResourceRecords": [{"Value": "'${vips[0]}'"}]'
-  apps_dns_target='"TTL": 60,
-        "ResourceRecords": [{"Value": "'${vips[1]}'"}]'
-fi
-
-# api-int record is needed just for Windows nodes
-# TODO: Remove the api-int entry in future
-echo "Creating DNS records..."
+echo "Creating DNS records ..."
 cat > "${SHARED_DIR}"/dns-create.json <<EOF
 {
-"Comment": "Create public OpenShift DNS records for Nutanix IPI CI install",
+"Comment": "Create OpenShift DNS records for Nutanix IPI CI install",
 "Changes": [{
     "Action": "UPSERT",
     "ResourceRecordSet": {
-      "Name": "api.$cluster_domain.",
+      "Name": "api.${cluster_domain}.",
       "Type": "A",
-      $api_dns_target
+      "TTL": 60,
+      "ResourceRecords": [{"Value": "${API_VIP}"}]
       }
     },{
     "Action": "UPSERT",
     "ResourceRecordSet": {
-      "Name": "api-int.$cluster_domain.",
+      "Name": "api-int.${cluster_domain}.",
       "Type": "A",
       "TTL": 60,
-      "ResourceRecords": [{"Value": "${vips[0]}"}]
+      "ResourceRecords": [{"Value": "${API_VIP}"}]
       }
     },{
     "Action": "UPSERT",
     "ResourceRecordSet": {
       "Name": "*.apps.$cluster_domain.",
       "Type": "A",
-      $apps_dns_target
+      "TTL": 60,
+      "ResourceRecords": [{"Value": "${INGRESS_VIP}"}]
       }
 }]}
 EOF
@@ -117,7 +86,8 @@ cat > "${SHARED_DIR}"/dns-delete.json <<EOF
     "ResourceRecordSet": {
       "Name": "api.$cluster_domain.",
       "Type": "A",
-      $api_dns_target
+      "TTL": 60,
+      "ResourceRecords": [{"Value": "${API_VIP}"}]
       }
     },{
     "Action": "DELETE",
@@ -125,14 +95,15 @@ cat > "${SHARED_DIR}"/dns-delete.json <<EOF
       "Name": "api-int.$cluster_domain.",
       "Type": "A",
       "TTL": 60,
-      "ResourceRecords": [{"Value": "${vips[0]}"}]
+      "ResourceRecords": [{"Value": "${API_VIP}"}]
       }
     },{
     "Action": "DELETE",
     "ResourceRecordSet": {
       "Name": "*.apps.$cluster_domain.",
       "Type": "A",
-      $apps_dns_target
+      "TTL": 60,
+      "ResourceRecords": [{"Value": "${INGRESS_VIP}"}]
       }
 }]}
 EOF
