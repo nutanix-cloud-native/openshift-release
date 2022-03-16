@@ -5,7 +5,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build01
+    cluster: build03
     context: ci/prow/cargo-test
     decorate: true
     decoration_config:
@@ -70,7 +70,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build01
+    cluster: build03
     context: ci/prow/e2e
     decorate: true
     decoration_config:
@@ -153,7 +153,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build01
+    cluster: build03
     context: ci/prow/images
     decorate: true
     decoration_config:
@@ -211,8 +211,8 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build01
-    context: ci/prow/rustfmt-1.52.0
+    cluster: build03
+    context: ci/prow/rustfmt-1.54.0
     decorate: true
     decoration_config:
       skip_cloning: true
@@ -220,9 +220,9 @@ presubmits:
     labels:
       ci.openshift.io/generator: prowgen
       pj-rehearse.openshift.io/can-be-rehearsed: "true"
-    name: pull-ci-openshift-priv-cincinnati-master-rustfmt-1.52.0
+    name: pull-ci-openshift-priv-cincinnati-master-rustfmt-1.54.0
     path_alias: github.com/openshift/cincinnati
-    rerun_command: /test rustfmt-1.52.0
+    rerun_command: /test rustfmt-1.54.0
     spec:
       containers:
       - args:
@@ -230,7 +230,7 @@ presubmits:
         - --image-import-pull-secret=/etc/pull-secret/.dockerconfigjson
         - --oauth-token-path=/usr/local/github-credentials/oauth
         - --report-credentials-file=/etc/report/credentials
-        - --target=rustfmt-1.52.0
+        - --target=rustfmt-1.54.0
         command:
         - ci-operator
         image: ci-operator:latest
@@ -263,14 +263,14 @@ presubmits:
       - name: result-aggregator
         secret:
           secretName: result-aggregator
-    trigger: (?m)^/test( | .* )rustfmt-1.52.0,?($|\s.*)
+    trigger: (?m)^/test( | .* )rustfmt-1.54.0,?($|\s.*)
   - agent: kubernetes
     always_run: true
     branches:
     - ^master$
     - ^master-
-    cluster: build01
-    context: ci/prow/rustfmt-1.55.0
+    cluster: build03
+    context: ci/prow/rustfmt-1.58.0
     decorate: true
     decoration_config:
       skip_cloning: true
@@ -278,9 +278,9 @@ presubmits:
     labels:
       ci.openshift.io/generator: prowgen
       pj-rehearse.openshift.io/can-be-rehearsed: "true"
-    name: pull-ci-openshift-priv-cincinnati-master-rustfmt-1.55.0
+    name: pull-ci-openshift-priv-cincinnati-master-rustfmt-1.58.0
     path_alias: github.com/openshift/cincinnati
-    rerun_command: /test rustfmt-1.55.0
+    rerun_command: /test rustfmt-1.58.0
     spec:
       containers:
       - args:
@@ -288,7 +288,7 @@ presubmits:
         - --image-import-pull-secret=/etc/pull-secret/.dockerconfigjson
         - --oauth-token-path=/usr/local/github-credentials/oauth
         - --report-credentials-file=/etc/report/credentials
-        - --target=rustfmt-1.55.0
+        - --target=rustfmt-1.58.0
         command:
         - ci-operator
         image: ci-operator:latest
@@ -321,13 +321,13 @@ presubmits:
       - name: result-aggregator
         secret:
           secretName: result-aggregator
-    trigger: (?m)^/test( | .* )rustfmt-1.55.0,?($|\s.*)
+    trigger: (?m)^/test( | .* )rustfmt-1.58.0,?($|\s.*)
   - agent: kubernetes
     always_run: true
     branches:
     - ^master$
     - ^master-
-    cluster: build01
+    cluster: build03
     context: ci/prow/yaml-lint
     decorate: true
     decoration_config:

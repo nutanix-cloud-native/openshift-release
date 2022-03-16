@@ -15,13 +15,12 @@ metadata:
   namespace: cvp-cluster-pool
 spec:
   baseDomain: cpaas-ci.devcluster.openshift.com
+  hibernationConfig: null
   imageSetRef:
-    name: ocp-release-4.6.54-x86-64-for-4.6.0-0-to-4.7.0-0
+    name: ocp-release-4.6.56-x86-64-for-4.6.0-0-to-4.7.0-0
   installAttemptsLimit: 1
   installConfigSecretTemplateRef:
     name: install-config-aws-us-west-1
-  labels:
-    hive.openshift.io/resume-skips-cluster-operators: "true"
   maxSize: 10
   platform:
     aws:

@@ -38,6 +38,11 @@ images:
       as:
       - registry.ci.openshift.org/openshift/release:golang-1.16
   to: assisted-installer-agent
+- dockerfile_literal: |
+    FROM base
+    COPY . .
+  from: src
+  to: assisted-installer-agent-src
 promotion:
   name: ocm-2.4
   namespace: edge-infrastructure
@@ -68,7 +73,7 @@ tests:
     env:
       RELEASE_TAG_PREFIX: ocm-2.4
     test:
-    - ref: baremetalds-assisted-images-publish
+    - ref: assisted-baremetal-images-publish
 - as: mirror-vcsref-image
   postsubmit: true
   steps:
@@ -77,7 +82,7 @@ tests:
     env:
       RELEASE_TAG_PREFIX: ocm-2.4
     test:
-    - ref: baremetalds-assisted-images-publish
+    - ref: assisted-baremetal-images-publish
 - as: ocm-publish
   postsubmit: true
   steps:
@@ -107,7 +112,7 @@ tests:
     env:
       ASSISTED_CONFIG: |
         SERVICE_BASE_REF=release-ocm-2.4
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-ipv6
   optional: true
   steps:
@@ -116,7 +121,7 @@ tests:
       ASSISTED_CONFIG: |
         SERVICE_BASE_REF=release-ocm-2.4
         IPv6=yes
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-single-node
   optional: true
   steps:
@@ -125,17 +130,34 @@ tests:
       ASSISTED_CONFIG: |
         SERVICE_BASE_REF=release-ocm-2.4
         NUM_MASTERS=1
-    workflow: baremetalds-assisted
-- as: e2e-metal-assisted-olm-suite
+    workflow: assisted-baremetal
+- as: e2e-metal-assisted-cnv
   optional: true
   steps:
     cluster_profile: packet-assisted
     env:
       ASSISTED_CONFIG: |
         SERVICE_BASE_REF=release-ocm-2.4
-        TEST_FUNC=test_olm_operator
-      PACKET_PLAN: m2.xlarge.x86
-    workflow: baremetalds-assisted
+        OLM_OPERATORS=cnv
+    workflow: assisted-baremetal
+- as: e2e-metal-assisted-ocs
+  optional: true
+  steps:
+    cluster_profile: packet-assisted
+    env:
+      ASSISTED_CONFIG: |
+        SERVICE_BASE_REF=release-ocm-2.4
+        OLM_OPERATORS=ocs
+    workflow: assisted-baremetal
+- as: subsystem-test
+  steps:
+    cluster_profile: packet-assisted
+    workflow: assisted-agent
+- as: subsystem-test-periodic
+  cron: '@daily'
+  steps:
+    cluster_profile: packet-assisted
+    workflow: assisted-agent
 zz_generated_metadata:
   branch: release-ocm-2.4
   org: openshift

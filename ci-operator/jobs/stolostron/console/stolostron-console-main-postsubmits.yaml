@@ -4,7 +4,7 @@ postsubmits:
     always_run: true
     branches:
     - ^main$
-    cluster: build02
+    cluster: build04
     decorate: true
     decoration_config:
       skip_cloning: true
@@ -18,7 +18,6 @@ postsubmits:
         - --gcs-upload-secret=/secrets/gcs/service-account.json
         - --image-import-pull-secret=/etc/pull-secret/.dockerconfigjson
         - --report-credentials-file=/etc/report/credentials
-        - --secret-dir=/secrets/acm-cicd-github
         - --target=fast-forward
         command:
         - ci-operator
@@ -29,9 +28,6 @@ postsubmits:
           requests:
             cpu: 10m
         volumeMounts:
-        - mountPath: /secrets/acm-cicd-github
-          name: acm-cicd-github
-          readOnly: true
         - mountPath: /secrets/gcs
           name: gcs-credentials
           readOnly: true
@@ -43,9 +39,6 @@ postsubmits:
           readOnly: true
       serviceAccountName: ci-operator
       volumes:
-      - name: acm-cicd-github
-        secret:
-          secretName: acm-cicd-github
       - name: pull-secret
         secret:
           secretName: registry-pull-credentials
@@ -56,24 +49,21 @@ postsubmits:
     always_run: true
     branches:
     - ^main$
-    cluster: build02
+    cluster: build04
     decorate: true
     decoration_config:
       skip_cloning: true
     labels:
-      ci-operator.openshift.io/is-promotion: "true"
       ci.openshift.io/generator: prowgen
     max_concurrency: 1
-    name: branch-ci-stolostron-console-main-images
+    name: branch-ci-stolostron-console-main-fast-forward-mce
     spec:
       containers:
       - args:
         - --gcs-upload-secret=/secrets/gcs/service-account.json
         - --image-import-pull-secret=/etc/pull-secret/.dockerconfigjson
-        - --image-mirror-push-secret=/etc/push-secret/.dockerconfigjson
-        - --promote
         - --report-credentials-file=/etc/report/credentials
-        - --target=[images]
+        - --target=fast-forward-mce
         command:
         - ci-operator
         image: ci-operator:latest
@@ -89,9 +79,6 @@ postsubmits:
         - mountPath: /etc/pull-secret
           name: pull-secret
           readOnly: true
-        - mountPath: /etc/push-secret
-          name: push-secret
-          readOnly: true
         - mountPath: /etc/report
           name: result-aggregator
           readOnly: true
@@ -100,9 +87,6 @@ postsubmits:
       - name: pull-secret
         secret:
           secretName: registry-pull-credentials
-      - name: push-secret
-        secret:
-          secretName: registry-push-credentials-ci-central
       - name: result-aggregator
         secret:
           secretName: result-aggregator
@@ -110,7 +94,7 @@ postsubmits:
     always_run: true
     branches:
     - ^main$
-    cluster: build02
+    cluster: build04
     decorate: true
     decoration_config:
       skip_cloning: true
@@ -152,9 +136,54 @@ postsubmits:
         secret:
           secretName: result-aggregator
   - agent: kubernetes
+    always_run: true
     branches:
     - ^main$
-    cluster: build02
+    cluster: build04
+    decorate: true
+    decoration_config:
+      skip_cloning: true
+    labels:
+      ci.openshift.io/generator: prowgen
+    max_concurrency: 1
+    name: branch-ci-stolostron-console-main-latest-image-mirror-mce
+    spec:
+      containers:
+      - args:
+        - --gcs-upload-secret=/secrets/gcs/service-account.json
+        - --image-import-pull-secret=/etc/pull-secret/.dockerconfigjson
+        - --report-credentials-file=/etc/report/credentials
+        - --target=latest-image-mirror-mce
+        command:
+        - ci-operator
+        image: ci-operator:latest
+        imagePullPolicy: Always
+        name: ""
+        resources:
+          requests:
+            cpu: 10m
+        volumeMounts:
+        - mountPath: /secrets/gcs
+          name: gcs-credentials
+          readOnly: true
+        - mountPath: /etc/pull-secret
+          name: pull-secret
+          readOnly: true
+        - mountPath: /etc/report
+          name: result-aggregator
+          readOnly: true
+      serviceAccountName: ci-operator
+      volumes:
+      - name: pull-secret
+        secret:
+          secretName: registry-pull-credentials
+      - name: result-aggregator
+        secret:
+          secretName: result-aggregator
+  - agent: kubernetes
+    branches:
+    - ^main$
+    cluster: build04
     decorate: true
     labels:
       pj-rehearse.openshift.io/can-be-rehearsed: "true"

@@ -27,10 +27,14 @@ base_images:
     name: test
     namespace: ocp-kni
     tag: dev-scripts
-  openshift_release_golang-1.16:
+  openshift_release_golang-1.17:
     name: release
     namespace: openshift
-    tag: golang-1.16
+    tag: golang-1.17
+  opm-builder:
+    name: opm-builder
+    namespace: ci
+    tag: latest
   postgresql-12-centos7:
     name: postgresql-12-centos7
     namespace: edge-infrastructure
@@ -44,22 +48,46 @@ images:
 - dockerfile_path: Dockerfile.assisted-service-build
   from: postgresql-12-centos7
   inputs:
-    openshift_release_golang-1.16:
+    openshift_release_golang-1.17:
       as:
-      - registry.ci.openshift.org/openshift/release:golang-1.16
+      - registry.ci.openshift.org/openshift/release:golang-1.17
   to: assisted-service-unit-test
 - dockerfile_path: Dockerfile.assisted-service
   from: coreos_centos_stream8
   inputs:
-    openshift_release_golang-1.16:
+    openshift_release_golang-1.17:
       as:
-      - registry.ci.openshift.org/openshift/release:golang-1.16
+      - registry.ci.openshift.org/openshift/release:golang-1.17
   to: assisted-service
 - dockerfile_literal: |
     FROM coreos/centos
     COPY . .
   from: src
   to: assisted-service-scripts
+- dockerfile_path: deploy/olm-catalog/bundle.Dockerfile
+  to: assisted-service-operator-bundle
+- dockerfile_literal: |
+    FROM quay.io/operator-framework/upstream-opm-builder:latest AS builder
+
+    ARG BUNDLE_IMGS=quay.io/edge-infrastructure/assisted-service-operator-bundle:latest
+
+    RUN opm index add \
+    --bundles "${BUNDLE_IMGS}" \
+    --out-dockerfile index.Dockerfile \
+    --generate
+
+    FROM quay.io/operator-framework/opm:latest
+    LABEL operators.operatorframework.io.index.database.v1=/database/index.db
+    COPY --from=builder database/index.db /database/index.db
+    EXPOSE 50051
+    ENTRYPOINT ["/bin/opm"]
+    CMD ["registry", "serve", "--database", "/database/index.db"]
+  from: opm-builder
+  inputs:
+    opm-builder:
+      as:
+      - quay.io/operator-framework/upstream-opm-builder:latest
+  to: assisted-service-index
 operator:
   bundles:
   - dockerfile_path: deploy/olm-catalog/bundle.Dockerfile
@@ -109,14 +137,14 @@ tests:
     dependencies:
       SOURCE_IMAGE_REF: assisted-service
     test:
-    - ref: baremetalds-assisted-images-publish
+    - ref: assisted-baremetal-images-publish
 - as: mirror-vcsref-image
   postsubmit: true
   steps:
     dependencies:
       SOURCE_IMAGE_REF: assisted-service
     test:
-    - ref: baremetalds-assisted-images-publish
+    - ref: assisted-baremetal-images-publish
 - as: ocm-publish
   postsubmit: true
   steps:
@@ -128,11 +156,24 @@ tests:
         OSCI_PUBLISH_DELAY=0
       RELEASE_REF: release-2.5
     workflow: ocm-ci-manifest-update
+- as: mce-publish
+  postsubmit: true
+  steps:
+    dependencies:
+      SOURCE_IMAGE_REF: assisted-service
+    env:
+      IMAGE_REPO: assisted-service
+      OSCI_ENV_CONFIG: |
+        OSCI_PUBLISH_DELAY=0
+        OSCI_PIPELINE_PRODUCT_PREFIX=backplane
+        OSCI_PIPELINE_REPO=backplane-pipeline
+      RELEASE_REF: backplane-2.0
+    workflow: ocm-ci-manifest-update
 - as: operator-publish
   postsubmit: true
   steps:
     test:
-    - ref: baremetalds-assisted-operator-publish
+    - ref: assisted-baremetal-operator-publish
 - as: lint
   commands: export GOLANGCI_LINT_CACHE=/tmp/.cache && export GOPROXY=https://proxy.golang.org
     && make lint
@@ -172,7 +213,7 @@ tests:
     owner: openshift-ci
     product: ocp
     timeout: 1h0m0s
-    version: "4.8"
+    version: "4.10"
   run_if_changed: ^(cmd/.*|data/.*|deploy/.*|hack/.*|internal/.*|pkg/.*|tools/.*|subsystem/.*|Dockerfile\..*|Makefile|go\.mod|go\.sum|swagger.yaml)$
   steps:
     test:
@@ -201,7 +242,7 @@ tests:
     owner: openshift-ci
     product: ocp
     timeout: 1h0m0s
-    version: "4.8"
+    version: "4.10"
   cron: 0 */6 * * *
   steps:
     test:
@@ -230,7 +271,7 @@ tests:
     owner: openshift-ci
     product: ocp
     timeout: 1h0m0s
-    version: "4.8"
+    version: "4.10"
   run_if_changed: ^(cmd/.*|data/.*|deploy/.*|hack/.*|internal/.*|pkg/.*|tools/.*|subsystem/.*|Dockerfile\..*|Makefile|go\.mod|go\.sum|swagger.yaml)$
   steps:
     test:
@@ -260,7 +301,7 @@ tests:
     owner: openshift-ci
     product: ocp
     timeout: 1h0m0s
-    version: "4.8"
+    version: "4.10"
   cron: 0 */6 * * *
   steps:
     test:
@@ -286,7 +327,6 @@ tests:
     workflow: generic-claim
 - as: e2e-metal-assisted-operator-disconnected
   optional: true
-  run_if_changed: ^(data/.*)$
   steps:
     cluster_profile: packet-assisted
     dependencies:
@@ -301,7 +341,7 @@ tests:
         REDFISH_EMULATOR_IGNORE_BOOT_DEVICE=True
       DISCONNECTED: "true"
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-metal-assisted-operator-disconnected-periodic
   cron: '@daily'
   steps:
@@ -315,7 +355,7 @@ tests:
         REDFISH_EMULATOR_IGNORE_BOOT_DEVICE=True
       DISCONNECTED: "true"
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-metal-assisted-operator-ztp
   run_if_changed: ^(cmd/.*|data/.*|deploy/.*|hack/.*|internal/.*|pkg/.*|tools/.*|Dockerfile\..*|Makefile|go\.mod|go\.sum|swagger.yaml)$
   steps:
@@ -333,7 +373,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-ai-operator-ztp-ipv4v6-sno-ocp-48
   optional: true
   steps:
@@ -351,7 +391,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4v6
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-ai-operator-ztp-ipv4v6-sno-ocp-49
   optional: true
   run_if_changed: ^(deploy/.*)$
@@ -370,7 +410,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4v6
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-metal-assisted-operator-ztp-multinode-spoke-periodic
   cron: '@daily'
   steps:
@@ -390,7 +430,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4
       NUM_EXTRA_WORKERS: "3"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-ai-operator-ztp-ipv4v6-3masters-periodic-ocp-49
   cron: '@daily'
   steps:
@@ -410,7 +450,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4v6
       NUM_EXTRA_WORKERS: "3"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-ai-operator-ztp-ipv4v6-3masters-periodic-ocp-48
   cron: '@daily'
   steps:
@@ -430,7 +470,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4v6
       NUM_EXTRA_WORKERS: "3"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-metal-assisted-operator-ztp-multinode-spoke
   optional: true
   steps:
@@ -450,7 +490,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4
       NUM_EXTRA_WORKERS: "3"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-ai-operator-ztp-ipv4v6-3masters-ocp-48
   optional: true
   steps:
@@ -470,7 +510,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4v6
       NUM_EXTRA_WORKERS: "3"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-ai-operator-ztp-ipv4v6-3masters-ocp-49
   optional: true
   run_if_changed: ^(deploy/.*)$
@@ -491,7 +531,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4v6
       NUM_EXTRA_WORKERS: "3"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-metal-assisted-operator-ztp-periodic
   cron: '@daily'
   steps:
@@ -506,7 +546,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-metal-assisted-operator-ztp-periodic-upgrade
   cron: '@daily'
   steps:
@@ -529,7 +569,7 @@ tests:
         REDFISH_EMULATOR_IGNORE_BOOT_DEVICE=True
       IP_STACK: v4
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp-upgrade
+    workflow: assisted-baremetal-operator-ztp-upgrade
 - as: e2e-ai-operator-ztp-ipv4v6-sno-periodic-ocp-48
   cron: '@daily'
   steps:
@@ -544,7 +584,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4v6
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-ai-operator-ztp-ipv4v6-sno-periodic-ocp-49
   cron: '@daily'
   steps:
@@ -562,7 +602,7 @@ tests:
       DISCONNECTED: "false"
       IP_STACK: v4v6
       NUM_EXTRA_WORKERS: "1"
-    workflow: baremetalds-assisted-operator-ztp
+    workflow: assisted-baremetal-operator-ztp
 - as: e2e-metal-assisted-tpmv2
   optional: true
   steps:
@@ -571,7 +611,7 @@ tests:
       ASSISTED_CONFIG: |
         DISK_ENCRYPTION_ROLES=all
         DISK_ENCRYPTION_MODE=tpmv2
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-ipv6
   run_if_changed: ^(data/.*)$
   steps:
@@ -580,7 +620,7 @@ tests:
       ASSISTED_CONFIG: |
         IPv6=yes
         IPv4=no
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-ipv4v6
   optional: true
   run_if_changed: ^(cmd/.*|data/.*|deploy/.*|hack/.*|internal/.*|pkg/.*|tools/.*|Dockerfile\..*|Makefile|go\.mod|go\.sum|swagger.yaml)$
@@ -590,7 +630,7 @@ tests:
       ASSISTED_CONFIG: |
         IPv6=yes
         IPv4=yes
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-none
   optional: true
   steps:
@@ -598,7 +638,7 @@ tests:
     env:
       ASSISTED_CONFIG: |
         PLATFORM=none
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-single-node
   optional: true
   run_if_changed: ^(data/.*)$
@@ -607,7 +647,7 @@ tests:
     env:
       ASSISTED_CONFIG: |
         NUM_MASTERS=1
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-static-ip-suite
   optional: true
   run_if_changed: ^(data/.*)$
@@ -617,7 +657,7 @@ tests:
       ASSISTED_CONFIG: |
         STATIC_IPS=true
         TEST_FUNC=test_networking
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-kube-api-net-suite
   run_if_changed: ^(cmd/.*|data/.*|deploy/.*|hack/.*|internal/.*|pkg/.*|tools/.*|Dockerfile\..*|Makefile|go\.mod|go\.sum|swagger.yaml)$
   steps:
@@ -631,12 +671,12 @@ tests:
         STATIC_IPS=true
         TEST_FUNC=test_kubeapi
         MAKEFILE_TARGET="create_full_environment run test_kube_api_parallel"
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted
   run_if_changed: ^(cmd/.*|data/.*|deploy/.*|hack/.*|internal/.*|pkg/.*|tools/.*|Dockerfile\..*|Makefile|go\.mod|go\.sum|swagger.yaml)$
   steps:
     cluster_profile: packet-assisted
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-onprem
   optional: true
   steps:
@@ -644,26 +684,59 @@ tests:
     env:
       ASSISTED_CONFIG: |
         DEPLOY_TARGET=onprem
-    workflow: baremetalds-assisted
-- as: e2e-metal-assisted-multi-version-suite
+    workflow: assisted-baremetal
+- as: e2e-metal-assisted-4-6
   optional: true
   run_if_changed: ^(data/.*)$
   steps:
     cluster_profile: packet-assisted
     env:
       ASSISTED_CONFIG: |
-        OPENSHIFT_VERSION="all"
-      PACKET_PLAN: m2.xlarge.x86
-    workflow: baremetalds-assisted
-- as: e2e-metal-assisted-olm-suite
+        OPENSHIFT_VERSION=4.6
+    workflow: assisted-baremetal
+- as: e2e-metal-assisted-4-8
+  optional: true
+  run_if_changed: ^(data/.*)$
+  steps:
+    cluster_profile: packet-assisted
+    env:
+      ASSISTED_CONFIG: |
+        OPENSHIFT_VERSION=4.8
+    workflow: assisted-baremetal
+- as: e2e-metal-assisted-4-9
+  optional: true
+  run_if_changed: ^(data/.*)$
+  steps:
+    cluster_profile: packet-assisted
+    env:
+      ASSISTED_CONFIG: |
+        OPENSHIFT_VERSION=4.9
+    workflow: assisted-baremetal
+- as: e2e-metal-assisted-4-10
+  optional: true
+  run_if_changed: ^(data/.*)$
+  steps:
+    cluster_profile: packet-assisted
+    env:
+      ASSISTED_CONFIG: |
+        OPENSHIFT_VERSION=4.10
+    workflow: assisted-baremetal
+- as: e2e-metal-assisted-cnv
   run_if_changed: ^(data/.*|internal/operators/.*)$
   steps:
     cluster_profile: packet-assisted
     env:
       ASSISTED_CONFIG: |
-        TEST_FUNC=test_olm_operator
-      PACKET_PLAN: m2.xlarge.x86
-    workflow: baremetalds-assisted
+        OLM_OPERATORS=cnv
+    workflow: assisted-baremetal
+- as: e2e-metal-assisted-ocs
+  run_if_changed: ^(data/.*|internal/operators/.*)$
+  steps:
+    cluster_profile: packet-assisted
+    env:
+      ASSISTED_CONFIG: |
+        OLM_OPERATORS=ocs
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-day2
   optional: true
   run_if_changed: ^(data/.*)$
@@ -672,7 +745,7 @@ tests:
     env:
       ASSISTED_CONFIG: |
         TEST_FUNC=test_deploy_day2_nodes_cloud
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-kube-api-late-binding-single-node-periodic
   cron: '@daily'
   steps:
@@ -683,7 +756,7 @@ tests:
         export KUBECONFIG=$(find ${KUBECONFIG} -type f)
         make deploy_assisted_operator test_kube_api_parallel
       TEST_SUITE: full
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-kube-api-late-binding-single-node
   optional: true
   steps:
@@ -693,7 +766,7 @@ tests:
         export TEST_FUNC=test_late_binding_kube_api_sno
         export KUBECONFIG=$(find ${KUBECONFIG} -type f)
         make deploy_assisted_operator test_kube_api_parallel
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-kube-api-late-unbinding-ipv4-single-node
   optional: true
   steps:
@@ -704,7 +777,7 @@ tests:
         export HOLD_INSTALLATION=true
         export KUBECONFIG=$(find ${KUBECONFIG} -type f)
         make deploy_assisted_operator test_kube_api_parallel
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 - as: e2e-metal-assisted-capi
   optional: true
   run_if_changed: ^(api/.*|internal/controller/controllers/.*)$
@@ -719,7 +792,7 @@ tests:
         TEST_FUNC=test_capi_provider
         MAKEFILE_TARGET="create_full_environment run deploy_capi_env test_kube_api_parallel"
       GATHER_CAPI_LOGS: "true"
-    workflow: baremetalds-assisted
+    workflow: assisted-baremetal
 zz_generated_metadata:
   branch: master
   org: openshift

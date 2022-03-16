@@ -43,7 +43,7 @@ cat > packet-setup.yaml <<-EOF
         plan: ${PACKET_PLAN}
         facility: any
         wait_for_public_IPv: 4
-        wait_timeout: 1200
+        wait_timeout: 1800
         state: active
         tags: "{{ 'PR:', lookup('env', 'PULL_NUMBER'), 'Job name:', lookup('env', 'JOB_NAME'), 'Job id:', lookup('env', 'PROW_JOB_ID') }}"
       register: hosts
@@ -111,24 +111,6 @@ cat > packet-setup.yaml <<-EOF
             ssh "\${SSHOPTS[@]}" "root@\${IP}" hostname && break
             sleep 10
         done
-
-        ssh "\${SSHOPTS[@]}" "root@\${IP}" bash - << EOC
-            if [[ ${PACKET_OS} == "centos_8" ]]; then
-              echo "Making sure we use vault mirror, as default CentOS repositories are already EOL..."
-              
-              sed -i '/mirrorlist=.*/d' /etc/yum.repos.d/CentOS-AppStream.repo
-              grep -qF 'vault.centos.org' /etc/yum.repos.d/CentOS-AppStream.repo || \
-                echo 'baseurl=http://vault.centos.org/\\\$contentdir/\\\$releasever/AppStream/\\\$basearch/os/' >> /etc/yum.repos.d/CentOS-AppStream.repo
-
-              sed -i '/mirrorlist=.*/d' /etc/yum.repos.d/CentOS-Base.repo
-              grep -qF 'vault.centos.org' /etc/yum.repos.d/CentOS-Base.repo || \
-                echo 'baseurl=http://vault.centos.org/\\\$contentdir/\\\$releasever/BaseOS/\\\$basearch/os/' >> /etc/yum.repos.d/CentOS-Base.repo
-
-              sed -i '/mirrorlist=.*/d' /etc/yum.repos.d/CentOS-Extras.repo
-              grep -qF 'vault.centos.org' /etc/yum.repos.d/CentOS-Extras.repo || \
-                echo 'baseurl=http://vault.centos.org/\\\$contentdir/\\\$releasever/extras/\\\$basearch/os/' >> /etc/yum.repos.d/CentOS-Extras.repo
-            fi
-        EOC
       dest: "${SHARED_DIR}/packet-conf.sh"
 EOF
 

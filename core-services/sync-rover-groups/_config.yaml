@@ -14,15 +14,30 @@ groups:
   aos-qe:
     clusters:
     - app.ci
+  art-admins:
+    clusters:
+    - app.ci
+  cincinnati-ci-admins:
+    clusters:
+    - app.ci
   cvp-pool-admins:
     clusters:
     - hive
-  hypershift-pool-admins:
+  hypershift-team:
     clusters:
     - hive
+    - app.ci
+    rename_to: hypershift-pool-admins
   msp-pool-admins:
     clusters:
     - hive
+  multiarch-devel:
+    clusters:
+    - arm01
+    - build01
+  okd-admins:
+    clusters:
+    - app.ci
   openshift-cluster-bot-developers:
     cluster_groups:
     - build-farm
@@ -34,7 +49,13 @@ groups:
     clusters:
     - app.ci
     rename_to: dpcr-admins
+  openshift-logging-admin:
+    clusters:
+    - app.ci
   openshift-release-controller-developers:
+    clusters:
+    - app.ci
+  sippy-admin:
     clusters:
     - app.ci
   test-platform-ci-monitoring-viewers:
@@ -45,3 +66,6 @@ groups:
     cluster_groups:
     - dp-managed
     rename_to: ci-sudoers
+  trt-admins:
+    clusters:
+    - app.ci

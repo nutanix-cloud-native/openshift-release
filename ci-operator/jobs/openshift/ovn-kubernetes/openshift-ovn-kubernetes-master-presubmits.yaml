@@ -5,7 +5,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/4.11-upgrade-from-stable-4.10-e2e-aws-ovn-upgrade
     decorate: true
     labels:
@@ -15,7 +15,6 @@ presubmits:
       ci.openshift.io/generator: prowgen
       pj-rehearse.openshift.io/can-be-rehearsed: "true"
     name: pull-ci-openshift-ovn-kubernetes-master-4.11-upgrade-from-stable-4.10-e2e-aws-ovn-upgrade
-    optional: true
     rerun_command: /test 4.11-upgrade-from-stable-4.10-e2e-aws-ovn-upgrade
     spec:
       containers:
@@ -80,7 +79,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/4.11-upgrade-from-stable-4.10-images
     decorate: true
     labels:
@@ -129,7 +128,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-aws-ovn
     decorate: true
     labels:
@@ -201,7 +200,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-aws-ovn-local-gateway
     decorate: true
     labels:
@@ -273,7 +272,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-aws-ovn-local-to-shared-gateway-mode-migration
     decorate: true
     labels:
@@ -345,7 +344,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-aws-ovn-shared-to-local-gateway-mode-migration
     decorate: true
     labels:
@@ -417,7 +416,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-aws-ovn-upgrade
     decorate: true
     labels:
@@ -489,7 +488,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-aws-ovn-windows
     decorate: true
     labels:
@@ -561,7 +560,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-azure-ovn
     decorate: true
     labels:
@@ -634,7 +633,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-gcp-ovn
     decorate: true
     labels:
@@ -710,7 +709,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-metal-ipi-ovn-dualstack
     decorate: true
     labels:
@@ -782,7 +781,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-metal-ipi-ovn-ipv6
     decorate: true
     labels:
@@ -854,7 +853,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-openstack-ovn
     decorate: true
     labels:
@@ -927,7 +926,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/e2e-ovn-hybrid-step-registry
     decorate: true
     labels:
@@ -1146,7 +1145,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/images
     decorate: true
     labels:
@@ -1194,7 +1193,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/okd-e2e-gcp-ovn
     decorate: true
     labels:
@@ -1273,7 +1272,7 @@ presubmits:
     branches:
     - ^master$
     - ^master-
-    cluster: build03
+    cluster: build04
     context: ci/prow/okd-images
     decorate: true
     labels:
