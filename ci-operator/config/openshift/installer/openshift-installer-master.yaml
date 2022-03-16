@@ -465,3 +465,10 @@ zz_generated_metadata:
   branch: master
   org: openshift
   repo: installer
+- as: e2e-nutanix
+  optional: true
+  steps:
+    cluster_profile: nutanix
+    workflow: openshift-e2e-nutanix
+
+

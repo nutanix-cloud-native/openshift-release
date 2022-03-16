@@ -159,6 +159,7 @@ ibmcloud)
     IC_API_KEY="$(< "${CLUSTER_PROFILE_DIR}/ibmcloud-api-key")"
     export IC_API_KEY
     ;;
+nutanix);;
 *) echo >&2 "Unsupported cluster type '${CLUSTER_TYPE}'"; exit 1;;
 esac
 
